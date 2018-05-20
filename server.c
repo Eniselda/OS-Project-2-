@@ -192,3 +192,185 @@ int main(int argc, char **argv){
 
 	} 
 	
+	//printf ("mapping ok, start address = %lu\n",(unsigned long) shm_start);
+	close(fd);
+
+	sh_d = (struct shared_data*) shm_start;
+	
+
+	//INITIALIZING THE DATA IN SHARED MEMORY 
+	//request_q
+	for(int i=0;i<10;i++){
+	
+	strcpy(sh_d->req_arr[i].keyword,"");
+	sh_d->req_arr[i].index=0; 
+	
+	}
+	
+	sh_d->in_q=0;
+	sh_d->out_q=0;
+	
+
+   //initializing queue state 
+	for(int i=0;i<10;i++){
+	
+		sh_d->queue_state[i]=0; 
+	}
+	
+	sh_d->in_s=0;
+	sh_d->out_s=0;
+	
+	
+	//initializing result queues 
+	
+	for(int i=0;i<10;i++){
+	
+	for(int j=0;j<100;j++){
+	
+	sh_d->r[i].arr[j]= 0;}
+	
+	sh_d->r[i].in_r=0;
+	sh_d->r[i].out_r=0;
+	
+	}
+	
+	
+	//CREATE SEMPAHORES FOR RESULT QUEUES  
+	
+	
+	//for mutex
+	for (int i =0; i<10; i++){
+	    snprintf(mutexx, sizeof(mutexx), "%s%s%d", prefix , "mutex -result",i);
+	    sem_unlink (mutexx);
+		sems_mutex[i] = sem_open(mutexx, O_CREAT | O_RDWR, 0660, 1);
+		if (sems_mutex[i] < 0) {
+			perror("can not create semaphore\n");
+			//exit (1);
+		}
+	
+	}
+	
+	//for full
+	for (int i =0; i<10; i++){
+	snprintf(fulll, sizeof(fulll), "%s%s%d", prefix , "full -result",i);
+	sem_unlink (fulll);
+	sems_full[i] = sem_open(fulll, O_CREAT | O_RDWR, 0660, 0);
+	if (sems_full[i] < 0) {
+		perror("can not create semaphore\n");
+		//exit (1);
+	}
+	
+	}
+	
+	//for empty
+	for (int i =0; i<10; i++){
+	    snprintf(emptyy, sizeof(emptyy), "%s%s%d", prefix , "empty -result",i);
+	    sem_unlink (emptyy);
+		sems_empty[i] = sem_open(emptyy, O_CREAT | O_RDWR, 0660, BUFFER_SIZE);
+		if (sems_empty[i] < 0) {
+			perror("can not create semaphore\n");
+			//exit (1);
+		}
+	
+	}
+	
+	
+	
+	/* first clean up semaphores with same names for Request */
+	
+	snprintf(mutexx, sizeof(mutexx), "%s%s", prefix , "mutex -request");
+	snprintf(fulll, sizeof(fulll), "%s%s", prefix , "full -request");
+	snprintf(emptyy, sizeof(emptyy), "%s%s", prefix , "empty -request");
+	
+	sem_unlink (mutexx);
+	sem_unlink (fulll);
+	sem_unlink (emptyy);
+	
+	
+	
+	sems_mutexR = sem_open(mutexx, O_CREAT | O_RDWR, 0660, 1);
+	if (sems_mutexR < 0) {
+		perror("can not create semaphore\n");
+		exit (1);
+	}
+	
+	
+	
+	
+	sems_fullR = sem_open(fulll, O_CREAT | O_RDWR, 0660, 0);
+	if (sems_fullR < 0) {
+		perror("can not create semaphore\n");
+		exit (1);
+	}
+	
+	
+	
+	sems_emptyR = sem_open(emptyy, O_CREAT | O_RDWR, 0660, 10);
+	if (sems_emptyR < 0) {
+		perror("can not create semaphore\n");
+		exit (1);
+	}
+	
+	
+	//SEMAPHORES FOR QUEUE STATE
+	
+	snprintf(mutexx, sizeof(mutexx), "%s%s", prefix , "mutex -request STATE");
+    	sem_unlink (mutexx);
+	
+	sems_mutexS = sem_open(mutexx, O_CREAT | O_RDWR, 0660, 1);
+	if (sems_mutexS < 0) {
+		perror("can not create semaphore\n");
+		exit (1);
+	}
+
+	
+	sem_close(sems_mutexS);
+		
+		
+	//WAITS for REQUEST queue
+
+	  
+	  while(1){
+	  
+	  pthread_t tid;
+	  struct request *p;
+	  p= malloc(sizeof(struct request));
+	    if (SYNCHRONIZED) {
+				sem_wait(sems_fullR);
+				sem_wait(sems_mutexR);
+	            
+	            
+	            strcpy(p->keyword,sh_d->req_arr[sh_d->out_q].keyword);
+	            p->index = sh_d->req_arr[sh_d->out_q].index;
+	            sh_d->out_q = (sh_d->out_q + 1) % 10;
+	            
+	  
+	            sem_post(sems_mutexR);
+				sem_post(sems_emptyR);
+				
+				pthread_create(&tid, NULL, search, (void*) p);
+			//	pthread_join(tid,NULL);
+				
+			} 
+			
+	/*	else{
+			   while (sh_d->in_q == sh_d->out_q)
+			   ;
+			   
+			   parameters[i].index  = sh_d->req_arr[sh_d->out_q].index;
+			   strcpy(parameters[i].keyword ,sh_d->req_arr[sh_d->out_q].keyword);
+
+			   
+			   thr=pthread_create(&(tid), NULL, &search, (void*) &parameters[i]);
+			   sh_d->out_q = (sh_d->out_q + 1) % BUFFER_SIZE;
+			   } */ 
+		   }
+	
+		sem_close(sems_mutexR);
+		sem_close(sems_emptyR);
+		sem_close(sems_fullR);
+	
+	
+
+	return 0;
+}
