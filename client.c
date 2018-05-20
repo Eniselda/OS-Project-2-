@@ -131,3 +131,143 @@ int main(int argc, char **argv){
 	sem_post(sems_mutexS);
 	
 	//OPEN SEMPAHORES FOR REQUEST QUEUES  
+	
+	snprintf(mutexx, sizeof(mutexx), "%s%s", prefix , "mutex -request");
+	snprintf(fulll, sizeof(fulll), "%s%s", prefix , "full -request");
+	snprintf(emptyy, sizeof(emptyy), "%s%s", prefix , "empty -request");
+
+		 sems_mutexR = sem_open(mutexx, O_RDWR);
+		 if (sems_mutexR < 0) {
+			perror("can not open semaphore\n");
+			exit (1);
+			}
+		  
+
+		 sems_fullR = sem_open(fulll, O_RDWR);
+		 if (sems_fullR < 0) {
+			perror("can not open semaphore\n");
+			exit (1);
+		}
+		
+		
+		 sems_emptyR = sem_open(emptyy, O_RDWR);
+		 if (sems_emptyR < 0) {
+			perror("can not open semaphore\n");
+			exit (1);
+		}
+		
+
+
+    
+	
+	//INSERT IN REQUEST QUEUE 
+	
+	if (SYNCHRONIZED) {
+				
+                
+        sem_wait(sems_emptyR);
+	    sem_wait(sems_mutexR);
+	    
+	    sh_d->req_arr[sh_d->in_q]= *qq;
+
+	    sh_d->in_q = (sh_d->in_q + 1) % 10;
+	
+		sem_post(sems_mutexR);
+		sem_post(sems_fullR);
+	
+	    }
+	    
+	    
+    else {
+    
+   			
+		while ( ((sh_d->in_q + 1) % BUFFER_SIZE)  == sh_d->out_q)
+		;
+	
+		sh_d->req_arr[sh_d->in_q]= *qq;
+		sh_d->in_q = (sh_d->in_q + 1) % BUFFER_SIZE;
+		
+		}
+		
+		
+		//closing the semaphores for the request queue 
+		
+		sem_close(sems_mutexR);
+		sem_close(sems_emptyR);
+		sem_close(sems_fullR);
+	
+	
+	//////////////////////////////////////////////////////////////
+	           //OPEN SEMAPHORES FOR RESULT 
+	           
+	  snprintf(mutexx, sizeof(mutexx), "%s%s%d", prefix , "mutex -result",free_index);       
+	  snprintf(fulll, sizeof(fulll), "%s%s%d", prefix , "full -result",free_index);        
+	  snprintf(emptyy, sizeof(emptyy), "%s%s%d", prefix , "empty -result",free_index);         
+	           
+      sems_mutex[free_index] = sem_open(mutexx, O_RDWR);
+
+	 if (sems_mutex[free_index] < 0) {
+		perror("can not open semaphore\n");
+		exit (1);
+	}
+	
+	
+     sems_full[free_index] = sem_open(fulll, O_RDWR);
+	if (sems_full[free_index] < 0) {
+		perror("can not open semaphore\n");
+		exit (1);
+	}
+	
+	
+	sems_empty[free_index] = sem_open(emptyy, O_RDWR);
+	if (sems_empty[free_index] < 0) {
+		perror("can not open semaphore\n");
+		exit (1);
+		}
+	///////////////////////////////////////////////////////////////////
+	
+
+			int val = -5;
+			
+            while (val != -1) {
+			if (SYNCHRONIZED) {
+				sem_wait(sems_full[free_index]);
+				sem_wait(sems_mutex[free_index]);
+		       
+		       	val = sh_d->r[free_index].arr[sh_d->r[free_index].out_r];
+				if(val != -1) 
+					printf("%d\n", val );
+				sh_d->r[free_index].out_r = (sh_d->r[free_index].out_r + 1) % BUFFER_SIZE;
+				
+				sem_post(sems_mutex[free_index]);
+				sem_post(sems_empty[free_index]);
+				
+				
+			}
+			/*	else{ 
+				    while(sh_d->r[i].in_r== sh_d->r[i].out_r)
+				  	;			
+				  	printf("%d\n", sh_d->r[i].arr[j]);
+					sh_d->r[i].out_r = (sh_d->r[i].out_r + 1) % BUFFER_SIZE;
+					 } */
+					 
+				} 
+			
+	
+       
+        sem_close(sems_mutex[free_index]);
+		sem_close(sems_empty[free_index]);
+		sem_close(sems_full[free_index]);
+  
+       //UPDATING THE QUEUE STATE 
+        sem_wait(sems_mutexS);    
+        	sh_d->queue_state[free_index]=0;
+        sem_post(sems_mutexS);
+        sem_close(sems_mutexS);
+        
+	//shm_unlink(sharedmem_name);
+	return 0;
+}
+
+	
+
