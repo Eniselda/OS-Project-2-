@@ -1,2 +1,2 @@
 # OS-Project-2-
-This project is part of Operating Systems Course. 
+This project is part of Operating Systems Course. It is build in Linux environment. In this	project	we implemented a	multi-threaded	server that processes	keyword search queries from	clients.We implement both the	server program and the client program.	 Multiple	 clients can request service from the	 server	 concurrently.The	service	given	will	be	a	keyword	search	service.	Upon	receiving	a	keyword	from a	client,	the	server	will	search the	keyword	in	an	input	text	file	and	will	send	back	the	line numbers of	the	lines	having the keyword at	least once (i.e.,	 line	 numbers	 of	matching	 lines)
